@@ -1,0 +1,33 @@
+#spring:
+#  application:
+#    name: "demo"
+#server:
+#  port: 8080
+#management:
+#  endpoints:
+#    web:
+#      base-path: "/manage"
+#logging:
+#  level:
+#    root: "INFO"
+spring:
+  application:
+    name: "demo"
+  r2dbc:
+    initialize-schema: "embedded"
+    url: "r2dbc:h2:mem:///testdb"
+    username: sa
+    password:
+server:
+  port: 8080
+management:
+  endpoints:
+    web:
+      base-path: "/manage"
+logging:
+  level:
+    root: "DEBUG"
+    org.springframework.data.r2dbc: DEBUG
+    io.r2dbc.spi: DEBUG
+domain:
+  name: http://localhost:3000
