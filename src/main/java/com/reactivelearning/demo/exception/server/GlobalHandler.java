@@ -2,6 +2,7 @@ package com.reactivelearning.demo.exception.server;
 
 import com.reactivelearning.demo.exception.entities.ExistsException;
 import com.reactivelearning.demo.exception.entities.NotFoundException;
+import com.reactivelearning.demo.exception.entities.WeakPasswordException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,12 @@ public class GlobalHandler {
     @ExceptionHandler(ExistsException.class)
     public Mono<ResponseEntity<String>> handleExistsException(ExistsException ex) {
         logger.error("Username exists.");
+        return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(WeakPasswordException.class)
+    public Mono<ResponseEntity<String>> handleWeakPasswordException(WeakPasswordException ex) {
+        logger.error("Password should be at least 8 characters long.");
         return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage()));
     }
 

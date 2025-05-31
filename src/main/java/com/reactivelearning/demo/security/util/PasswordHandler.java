@@ -27,4 +27,8 @@ public class PasswordHandler {
 
     }
 
+    public boolean compare(String raw, String hashed) {
+        return encoder.matches(raw, hashed);
+    }
+
 }

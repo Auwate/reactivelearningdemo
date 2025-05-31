@@ -27,7 +27,7 @@ management:
 logging:
   level:
     root: "DEBUG"
-    org.springframework.data.r2dbc: DEBUG
-    io.r2dbc.spi: DEBUG
+    org.springframework.data.r2dbc: INFO
+    io.r2dbc.spi: INFO
 domain:
   name: http://localhost:3000
