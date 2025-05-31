@@ -2,7 +2,8 @@ spring:
   application:
     name: "demo"
   r2dbc:
-    url: "r2dbc:h2:mem:///testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+    initialize-schema: "embedded"
+    url: "r2dbc:h2:mem:///testdb"
     username: sa
     password:
 server:
@@ -14,3 +15,7 @@ management:
 logging:
   level:
     root: "DEBUG"
+    org.springframework.data.r2dbc: DEBUG
+    io.r2dbc.spi: DEBUG
+domain:
+  name: http://localhost:3000

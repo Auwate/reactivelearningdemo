@@ -54,12 +54,17 @@ public class UserService implements ReactiveUserDetailsService {
                         UserDTO.of(user.getUsername(), user.getPassword(), user.getEmail())));
     }
 
+    public Mono<User> getUser(String username) {
+        return usersRepository.findByUsername(username)
+                .switchIfEmpty(Mono.error(new NotFoundException("User not found with credentials.")));
+    }
+
     public Mono<Map<UUID, UserDTO>> addUser(UserDTO user) {
-        return usersRepository.findByUsername(user.getUsername())
+        return Mono.defer(() -> usersRepository.findByUsername(user.getUsername()))
                 .flatMap(exists -> Mono.error(new ExistsException("Username exists.")))
-                .switchIfEmpty(usersRepository.save(dtoToUser(user))
+                .switchIfEmpty(Mono.defer(() -> usersRepository.save(dtoToUser(user)))
                         .flatMap(savedUser -> rolesRepository.findByRole("USER")
-                                .switchIfEmpty(rolesRepository.save(Role.of("USER")))
+                                .switchIfEmpty(Mono.defer(() -> rolesRepository.save(Role.of("USER"))))
                                 .flatMap(savedRole -> usersRolesRepository.save(
                                         UserRoles.of(
                                                 savedUser.getId(),

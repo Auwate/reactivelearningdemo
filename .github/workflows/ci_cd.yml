@@ -1,0 +1,38 @@
+name: CI/CD pipeline - Tests & Deployment
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Test
+        run: mvn -B clean verify
+
+  docker-build-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKER_HUB_PASS }}" | docker login -u "${{ secrets.DOCKER_HUB_USER }}" -- password-stdin
+
+      - name: Build image
+        run: docker build -t "${{ secrets.DOCKER_HUB_USER }}"/reactivelearningdemo:latest .
+
+      - name: Push image
+        run: docker push "${{ secrets.DOCKER_HUB_USER }}"/reactivelearningdemo:latest
