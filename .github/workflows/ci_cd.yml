@@ -32,7 +32,7 @@ jobs:
         run: echo "${{ secrets.DOCKER_HUB_PASS }}" | docker login -u "${{ secrets.DOCKER_HUB_USER }}" --password-stdin
 
       - name: Build image
-        run: docker build -t "${{ secrets.DOCKER_HUB_USER }}"/reactivelearningdemo:latest .
+        run: docker build -t auwate/reactivelearningdemo:latest .
 
       - name: Push image
-        run: docker push "${{ secrets.DOCKER_HUB_USER }}"/reactivelearningdemo:latest
+        run: docker push auwate/reactivelearningdemo:latest
