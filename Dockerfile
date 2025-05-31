@@ -1,6 +1,6 @@
 # == Build stage. Includes JDK, src folder, and everything else to build the jar
 
-FROM 3.9.9-eclipse-temurin-21-alpine AS builder
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /build
 
