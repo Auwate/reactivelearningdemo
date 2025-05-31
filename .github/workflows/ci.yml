@@ -1,4 +1,4 @@
-name: CI Pipeline for only running automated tests. Used for PR requests with main
+name: CI Pipeline - Only Tests
 
 on:
   pull_request:

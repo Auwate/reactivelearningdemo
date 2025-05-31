@@ -1,4 +1,4 @@
-name: CI/CD pipeline for automated testing and deployment. Used for commits to main
+name: CI/CD pipeline - Tests & Deployment
 
 on:
   push:
