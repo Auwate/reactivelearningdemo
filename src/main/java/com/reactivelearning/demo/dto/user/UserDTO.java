@@ -1,4 +1,4 @@
-package com.reactivelearning.demo.dto;
+package com.reactivelearning.demo.dto.user;
 
 import jakarta.validation.constraints.NotBlank;
 

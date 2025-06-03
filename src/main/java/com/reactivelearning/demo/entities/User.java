@@ -1,13 +1,24 @@
 package com.reactivelearning.demo.entities;
 
-import com.reactivelearning.demo.dto.UserDTO;
+import com.reactivelearning.demo.dto.user.UserDTO;
+import com.reactivelearning.demo.dto.user.UserRequest;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
+/**
+ * An entity class for use with the database. It holds various database fields, and has a many-to-many connection
+ * with Roles.
+ */
 @Table("users")
-public class User {
+public class User implements UserDetails {
 
     @Id
     private UUID id;
@@ -16,20 +27,41 @@ public class User {
     private String password;
     private String email;
 
-    public User (String username, String password, String email) {
+    @Transient
+    private List<Role> roles;
+
+    public User(String username, String password, String email) {
         this.username = username;
         this.password = password;
         this.email = email;
     }
 
-    public User () {}
+    public User(String username, String password, String email, Role role) {
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.roles = List.of(role);
+    }
 
-    public static User of(UserDTO user) {
+    public User() {}
+
+    public static User fromDTO(UserDTO user) {
         return new User(user.getUsername(), user.getPassword(), user.getEmail());
+    }
+
+    public static User fromRequest(UserRequest user) {
+        return new User(user.getUsername(), user.getPassword(), user.getEmail(), Role.of(user.getRole().name()));
     }
 
     public static User of() {
         return new User("N/A", "N/A", "N/A");
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getRole()))
+                .toList();
     }
 
     public UUID getId() {
@@ -63,6 +95,10 @@ public class User {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    public List<Role> getRoles() {return this.roles;}
+
+    public void setRoles(List<Role> roles) {this.roles = roles;}
 
     public User update(String username, String password, String email) {
         if (username != null) {

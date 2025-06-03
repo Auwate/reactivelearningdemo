@@ -5,6 +5,10 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.util.UUID;
 
+/**
+ * An entity class for use with the database. It holds the fields necessary to populate the roles table, and has
+ * a many-to-many connection with Users.
+ */
 @Table("roles")
 public class Role {
 

@@ -1,5 +1,6 @@
 package com.reactivelearning.demo.entities;
 
+import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -7,6 +8,9 @@ import java.util.UUID;
 
 @Table("users_roles")
 public class UserRoles {
+
+    @Id
+    private UUID id; // Surrogate key
 
     @Column("users_id")
     private UUID usersId;
@@ -39,6 +43,14 @@ public class UserRoles {
 
     public void setRolesId(UUID rolesId) {
         this.rolesId = rolesId;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
     }
 
 }
