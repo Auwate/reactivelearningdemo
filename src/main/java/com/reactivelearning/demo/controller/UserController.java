@@ -1,7 +1,9 @@
 package com.reactivelearning.demo.controller;
 
-import com.reactivelearning.demo.dto.PartialUserDTO;
-import com.reactivelearning.demo.dto.UserDTO;
+import com.reactivelearning.demo.dto.auth.LoginRequest;
+import com.reactivelearning.demo.dto.auth.RegisterRequest;
+import com.reactivelearning.demo.dto.user.PartialUserDTO;
+import com.reactivelearning.demo.dto.user.UserDTO;
 import com.reactivelearning.demo.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -21,7 +23,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 public class UserController {
 
-    private UserService userService;
+    private final UserService userService;
 
     @Autowired
     public UserController(UserService userService) {
@@ -30,9 +32,48 @@ public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
+    /**
+     * Controller method for /login
+     * @param loginRequest Object of LoginRequest. Holds the TOTP code for authenticating a user if they have
+     *                     totp enabled.
+     * @return Void : The controller returns a status code and related authentication cookies.
+     */
+    @PostMapping("/auth/login")
+    public Mono<ResponseEntity<Void>> login(
+            @RequestBody @Valid LoginRequest loginRequest
+    ) {
+        return userService.login(loginRequest)
+                .doOnSubscribe(sub -> logger.info("POST connection received at /api/v1/login"))
+                .map(loginResponse -> {
+                    if (loginResponse.requires2fa()) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                    } else if (loginResponse.invalid2fa()) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                    } else if (loginResponse.success()) {
+                        return ResponseEntity.status(HttpStatus.OK).build();
+                    } else {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                    }
+                });
+    }
+
+    /**
+     * Controller method for /register.
+     * @param registerRequest Object of RegisterRequest. Holds data for registering a user.
+     * @return Void : The controller returns a status code and related authentication cookies.
+     */
+    @PostMapping("/auth/register")
+    public Mono<ResponseEntity<Void>> register(
+            @RequestBody @Valid RegisterRequest registerRequest
+    ) {
+        return userService.register(registerRequest)
+                .map(response -> ResponseEntity.status(HttpStatus.CREATED).build());
+    }
+
     @PostMapping("/users")
     public Mono<ResponseEntity<Map<UUID, UserDTO>>> createUser(
-            @RequestBody @Valid UserDTO userDTO) {
+            @RequestBody @Valid UserDTO userDTO
+    ) {
         logger.info("POST connection received at /api/v1/users");
         return userService.addUser(userDTO)
                 .map(createdUsers -> ResponseEntity.ok(createdUsers));

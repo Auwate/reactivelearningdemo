@@ -15,7 +15,7 @@ spring:
     name: "demo"
   r2dbc:
     initialize-schema: "embedded"
-    url: "r2dbc:h2:mem:///testdb"
+    url: "r2dbc:h2:mem:///db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=TRUE;"
     username: sa
     password:
 server:

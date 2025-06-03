@@ -2,6 +2,7 @@ package com.reactivelearning.demo.exception.server;
 
 import com.reactivelearning.demo.exception.entities.ExistsException;
 import com.reactivelearning.demo.exception.entities.NotFoundException;
+import com.reactivelearning.demo.exception.entities.RolesNotFoundException;
 import com.reactivelearning.demo.exception.entities.WeakPasswordException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,32 +20,55 @@ public class GlobalHandler {
 
     @ExceptionHandler(WebExchangeBindException.class)
     public Mono<ResponseEntity<String>> handleValidationException(WebExchangeBindException ex) {
-        logger.error("ConstraintViolationException handled");
-        String response = "Please check your provided JSON data and try again.";
-        return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response));
+        return Mono.fromSupplier(() -> ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("Please check your provided JSON data and try again."))
+                .doOnSubscribe(sub -> logger.error("ConstraintViolationException handled"));
     }
 
+    @ExceptionHandler(NotFoundException.class)
     public Mono<ResponseEntity<String>> handleNotFoundException(NotFoundException ex) {
-        logger.error("Could not find user.");
-        return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage()));
+        return Mono.fromSupplier(() -> ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error("User could not be found."));
     }
 
     @ExceptionHandler(ExistsException.class)
     public Mono<ResponseEntity<String>> handleExistsException(ExistsException ex) {
-        logger.error("Username exists.");
-        return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage()));
+        return Mono.fromSupplier(() -> ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error("User tried registering with duplicate name."));
     }
 
     @ExceptionHandler(WeakPasswordException.class)
     public Mono<ResponseEntity<String>> handleWeakPasswordException(WeakPasswordException ex) {
-        logger.error("Password should be at least 8 characters long.");
-        return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage()));
+        return Mono.fromSupplier(
+                () -> ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error(
+                        "User tried registering with a password <= 8 characters long."
+                ));
+    }
+
+    @ExceptionHandler(RolesNotFoundException.class)
+    public Mono<ResponseEntity<String>> handleRolesNotFoundException(RolesNotFoundException ex) {
+        return Mono.fromSupplier(() -> ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error("User with no role was found."));
     }
 
     @ExceptionHandler(Exception.class)
     public Mono<ResponseEntity<String>> handleGenericException(Exception ex) {
-        logger.error("Exception: {} Type: {}", ex.getMessage(), ex.getClass());
-        return Mono.fromSupplier(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage()));
+        return Mono.fromSupplier(
+                () -> ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error(
+                        "Exception: {} Type: {}", ex.getMessage(), ex.getClass()));
     }
 
 }

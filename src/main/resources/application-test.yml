@@ -3,7 +3,7 @@ spring:
     name: "demo"
   r2dbc:
     initialize-schema: "embedded"
-    url: "r2dbc:h2:mem:///testdb"
+    url: "r2dbc:h2:mem:///testdb;"
     username: sa
     password:
 server:
@@ -14,7 +14,7 @@ management:
       base-path: "/manage"
 logging:
   level:
-    root: "DEBUG"
+    root: "INFO"
     org.springframework.data.r2dbc: DEBUG
     io.r2dbc.spi: DEBUG
 domain:

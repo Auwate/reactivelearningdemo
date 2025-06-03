@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * A class for dealing with passwords. Has some utilities for rejecting passwords if they are too weak.
+ */
 @Component
 public class PasswordHandler {
 
