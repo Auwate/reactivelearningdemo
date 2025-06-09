@@ -7,7 +7,7 @@ WORKDIR /build
 COPY ./pom.xml ./
 COPY ./src ./src
 
-RUN mvn clean package -Dskiptests
+RUN mvn clean package -DskipTests
 
 # == Runtime environment. Includes JRE and jar file
 
