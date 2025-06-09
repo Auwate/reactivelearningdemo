@@ -22,6 +22,8 @@ logging:
     root: "INFO"
     org.springframework.data.r2dbc: DEBUG
     io.r2dbc.spi: DEBUG
+jwt:
+  secret: ${JWT_SECRET_KEY:Undefined}
 domain:
   name: http://localhost:3000
 mfa:

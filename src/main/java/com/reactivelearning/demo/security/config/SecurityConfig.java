@@ -50,7 +50,6 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/users").authenticated()
                 )
-                .addFilterBefore(cookieFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .csrf(csrf -> csrf
                         .requireCsrfProtectionMatcher(exchange -> {
                             if (exchange.getRequest().getMethod().matches("GET")) {
