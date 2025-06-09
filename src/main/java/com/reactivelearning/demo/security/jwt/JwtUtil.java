@@ -3,16 +3,15 @@ package com.reactivelearning.demo.security.jwt;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.reactivelearning.demo.entities.User;
-import com.reactivelearning.demo.exception.entities.InternalServerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.KeyGenerator;
-import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Date;
 
 @Component
@@ -91,19 +90,16 @@ public class JwtUtil {
      * @return String : The secret key OR a random key
      */
     private String getSecret(String secretKey) {
-        try {
-            if (secretKey.equals("Undefined")) {
-                KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-                keyGen.init(256);
-                String key = keyGen.generateKey().toString();
-                logger.warn("⚠️ Generated ephemeral JWT secret key: {}", key);
-                return key;
-            } else {
-                return secretKey;
-            }
-        } catch (NoSuchAlgorithmException ex) {
-            logger.error("JWT secret could not be created: {}", ex.getMessage());
-            throw new InternalServerException("An issue occurred.");
+        if (secretKey.equals("Undefined")) {
+            SecureRandom secureRandom = new SecureRandom();
+            byte[] bytes = new byte[32];
+            secureRandom.nextBytes(bytes);
+            String key = Arrays.toString(bytes);
+
+            logger.warn("⚠️ Generated ephemeral JWT secret key: {}", key);
+            return key;
+        } else {
+            return secretKey;
         }
     }
 
