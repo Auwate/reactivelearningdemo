@@ -18,6 +18,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Setup SSL
+        run: |
+          chmod 777 build_ssl.sh
+          ./build_ssl.sh
+
       - name: Test
         run: mvn -B clean verify
 
