@@ -21,7 +21,7 @@ jobs:
       - name: Setup SSL
         run: |
           chmod 777 build_ssl.sh
-          ./ssl_build.sh
+          ./build_ssl.sh
 
       - name: Test
         run: mvn -B clean verify
