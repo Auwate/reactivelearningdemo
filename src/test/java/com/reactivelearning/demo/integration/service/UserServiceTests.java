@@ -11,6 +11,7 @@ import com.reactivelearning.demo.exception.entities.WeakPasswordException;
 import com.reactivelearning.demo.repository.user.RolesRepository;
 import com.reactivelearning.demo.repository.user.UsersRepository;
 import com.reactivelearning.demo.repository.user.UsersRolesRepository;
+import com.reactivelearning.demo.security.jwt.JwtUtil;
 import com.reactivelearning.demo.security.util.PasswordHandler;
 import com.reactivelearning.demo.service.MfaService;
 import com.reactivelearning.demo.service.UserService;
@@ -50,7 +51,8 @@ public class UserServiceTests {
             UsersRepository usersRepository,
             RolesRepository rolesRepository,
             UsersRolesRepository usersRolesRepository,
-            TransactionalOperator transactionalOperator
+            TransactionalOperator transactionalOperator,
+            JwtUtil jwtUtil
     ) {
         this.passwordHandler = passwordHandler;
         this.usersRepository = usersRepository;
@@ -63,7 +65,8 @@ public class UserServiceTests {
                 usersRolesRepository,
                 passwordHandler,
                 transactionalOperator,
-                mfaService
+                mfaService,
+                jwtUtil
         );
     }
 

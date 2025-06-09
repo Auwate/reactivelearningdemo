@@ -8,6 +8,11 @@ spring:
     password:
 server:
   port: 8080
+  ssl:
+    key-store: "springboot.p12"
+    key-store-password: "admin"
+    key-store-type: PKCS12
+    key-alias: springboot
 management:
   endpoints:
     web:
@@ -21,3 +26,10 @@ domain:
   name: http://localhost:3000
 mfa:
   secret: ${MFA_SECRET_KEY:Undefined} # Make sure to encode to Base64
+app:
+  security:
+    filters:
+      cookies:
+        enabled: true
+        permitted-paths:
+          - "/api/v1/auth/**"

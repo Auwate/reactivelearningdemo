@@ -65,7 +65,8 @@ public class UserControllerTests {
                 .uri(REGISTER_URI)
                 .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().is2xxSuccessful();
+                .expectStatus().is2xxSuccessful()
+                .expectBody(String.class);
 
     }
 
@@ -150,7 +151,10 @@ public class UserControllerTests {
                 .bodyValue(loginRequest)
                 .header(HttpHeaders.AUTHORIZATION, "Basic " + encodedUser)
                 .exchange()
-                .expectStatus().is2xxSuccessful();
+                .expectStatus().is2xxSuccessful()
+                .expectCookie().httpOnly("reactive_authn_authz", true)
+                .expectCookie().sameSite("Strict", "Strict")
+                .expectCookie().secure("reactive_authn_authz", true);
 
     }
 

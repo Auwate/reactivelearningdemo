@@ -10,7 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
@@ -40,6 +42,7 @@ public class UserController {
      */
     @PostMapping("/auth/login")
     public Mono<ResponseEntity<Void>> login(
+            ServerHttpResponse response,
             @RequestBody @Valid LoginRequest loginRequest
     ) {
         return userService.login(loginRequest)
@@ -50,6 +53,14 @@ public class UserController {
                     } else if (loginResponse.invalid2fa()) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
                     } else if (loginResponse.success()) {
+                        ResponseCookie cookie = ResponseCookie
+                                .from("reactive_authn_authz", loginResponse.getJwtToken())
+                                .httpOnly(true)
+                                .sameSite("Strict")
+                                .secure(true)
+                                .path("/")
+                                .build();
+                        response.addCookie(cookie);
                         return ResponseEntity.status(HttpStatus.OK).build();
                     } else {
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
