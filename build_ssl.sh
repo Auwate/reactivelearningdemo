@@ -13,3 +13,6 @@ openssl x509 -req -in springboot.csr -CA ca.crt -CAkey ca.key -CAcreateserial -o
 
 # Package into a PKCS12 for use in SpringBoot
 openssl pkcs12 -export -in springboot.crt -inkey springboot.key -out springboot.p12 -name springboot -CAfile ca.crt -caname rootCA -passout pass:admin
+
+# Move it into src/test/resources/
+cp ./springboot.crt ./src/test/resources

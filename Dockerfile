@@ -21,14 +21,6 @@ COPY --from=builder /build/target/*.jar ./auth.jar
 COPY --from=builder /build/springboot.crt ./
 COPY --from=builder /build/springboot.p12 ./
 
-RUN keytool -importcert \
-    -noprompt \
-    -trustcacerts \
-    -alias springboot \
-    -file springboot.crt \
-    -keystore /etc/ssl/certs/java/cacerts \
-    -storepass changeit
-
 EXPOSE 8080
 
 CMD ["java", "-jar", "auth.jar"]
