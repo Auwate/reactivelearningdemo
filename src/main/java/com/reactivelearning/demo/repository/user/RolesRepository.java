@@ -1,4 +1,4 @@
-package com.reactivelearning.demo.repository;
+package com.reactivelearning.demo.repository.user;
 
 import com.reactivelearning.demo.entities.Role;
 import org.springframework.data.r2dbc.repository.Query;

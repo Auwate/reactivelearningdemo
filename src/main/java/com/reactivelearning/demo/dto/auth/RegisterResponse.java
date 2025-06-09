@@ -9,17 +9,18 @@ public class RegisterResponse {
 
     private boolean success;
     private String jwtToken;
-
+    private String mfaUri;
 
     public RegisterResponse() {}
 
-    public RegisterResponse(boolean success, String jwtToken) {
+    public RegisterResponse(boolean success, String jwtToken, String mfaUri) {
         this.success = success;
         this.jwtToken = jwtToken;
+        this.mfaUri = mfaUri;
     }
 
-    public static RegisterResponse fromUser(User user) {
-        return new RegisterResponse(true, "");
+    public static RegisterResponse of(User user, String uri) {
+        return new RegisterResponse(true, "", uri);
     }
 
     public boolean isSuccess() {
@@ -28,6 +29,10 @@ public class RegisterResponse {
 
     public String getJwtToken() {
         return jwtToken;
+    }
+
+    public String getMfaUri() {
+        return mfaUri;
     }
 
 }

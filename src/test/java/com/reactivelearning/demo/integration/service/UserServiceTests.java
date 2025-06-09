@@ -2,17 +2,18 @@ package com.reactivelearning.demo.integration.service;
 
 import com.reactivelearning.demo.dto.auth.RegisterRequest;
 import com.reactivelearning.demo.dto.user.UserRequest;
+import com.reactivelearning.demo.entities.Mfa;
 import com.reactivelearning.demo.entities.RoleType;
 import com.reactivelearning.demo.entities.User;
 import com.reactivelearning.demo.exception.entities.ExistsException;
 import com.reactivelearning.demo.exception.entities.NotFoundException;
 import com.reactivelearning.demo.exception.entities.WeakPasswordException;
-import com.reactivelearning.demo.repository.RolesRepository;
-import com.reactivelearning.demo.repository.UsersRepository;
-import com.reactivelearning.demo.repository.UsersRolesRepository;
+import com.reactivelearning.demo.repository.user.RolesRepository;
+import com.reactivelearning.demo.repository.user.UsersRepository;
+import com.reactivelearning.demo.repository.user.UsersRolesRepository;
 import com.reactivelearning.demo.security.util.PasswordHandler;
+import com.reactivelearning.demo.service.MfaService;
 import com.reactivelearning.demo.service.UserService;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +21,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("test")
@@ -32,42 +37,53 @@ public class UserServiceTests {
 
     private final Logger logger = LoggerFactory.getLogger(UserServiceTests.class);
 
-    private final UserService userService;
     private final PasswordHandler passwordHandler;
     private final UsersRepository usersRepository;
     private final RolesRepository rolesRepository;
     private final UsersRolesRepository usersRolesRepository;
+    private final UserService userService;
+    private final MfaService mfaService;
 
     @Autowired
     public UserServiceTests(
-            UserService userService,
             PasswordHandler passwordHandler,
             UsersRepository usersRepository,
             RolesRepository rolesRepository,
-            UsersRolesRepository usersRolesRepository
+            UsersRolesRepository usersRolesRepository,
+            TransactionalOperator transactionalOperator
     ) {
-        this.userService = userService;
         this.passwordHandler = passwordHandler;
         this.usersRepository = usersRepository;
         this.rolesRepository = rolesRepository;
         this.usersRolesRepository = usersRolesRepository;
+        this.mfaService = mock(MfaService.class);           // MfaService is mocked.
+        this.userService = new UserService(
+                usersRepository,
+                rolesRepository,
+                usersRolesRepository,
+                passwordHandler,
+                transactionalOperator,
+                mfaService
+        );
     }
 
     /**
      * Test that the service layer can successfully create a user, role, and userRole
      */
     @Test
-    @Order(1)
     void shouldCreateUserWhenDataIsValid() {
 
-        logger.debug("shouldCreateUserWhenDataIsValid: Starting");
+        logger.info("shouldCreateUserWhenDataIsValid: Starting");
 
         RegisterRequest registerRequest = new RegisterRequest("Test", "TestPassword", "Test3");
         UserRequest userDTO = UserRequest.fromRegisterRequest(registerRequest, RoleType.USER);
 
+        Mfa mfa = Mfa.of(UUID.randomUUID(), false, "");
+        when(mfaService.createMfa(any(User.class))).thenReturn(Mono.just(mfa));
+
         Mono<User> request = userService.createUser(userDTO);
 
-        logger.debug("shouldCreateUserWhenDataIsValid: Test 1");
+        logger.info("shouldCreateUserWhenDataIsValid: Test 1");
 
         StepVerifier.create(request)
                 .expectNextMatches(result -> {
@@ -75,13 +91,14 @@ public class UserServiceTests {
                     assertTrue(passwordHandler.compare(userDTO.getPassword(), result.getPassword()), String.format("Expected %s, Got %s", userDTO.getPassword(), result.getPassword()));
                     assertEquals(userDTO.getEmail(), result.getEmail(), String.format("Expected %s, Got %s", userDTO.getEmail(), result.getEmail()));
                     assertEquals(RoleType.USER.name(), result.getRoles().getFirst().getRole());
+                    verify(mfaService, times(1)).createMfa(any(User.class));
 
                     return true;
                 })
                 .expectComplete()
                 .verify();
 
-        logger.debug("shouldCreateUserWhenDataIsValid: Test 2");
+        logger.info("shouldCreateUserWhenDataIsValid: Test 2");
 
         StepVerifier.create(usersRepository.findByUsername(userDTO.getUsername())
                 .switchIfEmpty(Mono.error(new NotFoundException("User does not exist.")))
@@ -103,10 +120,9 @@ public class UserServiceTests {
      * Test that the service layer will fail on a weak password
      */
     @Test
-    @Order(2)
     void shouldFailToCreateUserWhenPasswordIsWeak() {
 
-        logger.debug("shouldFailToCreateUserWhenPasswordIsWeak: Starting");
+        logger.info("shouldFailToCreateUserWhenPasswordIsWeak: Starting");
 
         RegisterRequest registerRequest = new RegisterRequest("Test2", "Weak", "Test3");
         UserRequest userDTO = UserRequest.fromRegisterRequest(registerRequest, RoleType.USER);
@@ -123,13 +139,15 @@ public class UserServiceTests {
      * Test that the service layer will fail on a duplicate name
      */
     @Test
-    @Order(3)
     void shouldFailOnDuplicateName() {
 
-        logger.debug("shouldFailOnDuplicateName: Starting");
+        logger.info("shouldFailOnDuplicateName: Starting");
 
         RegisterRequest registerRequest = new RegisterRequest("Test", "TestPassword", "Test3");
         UserRequest userDTO = UserRequest.fromRegisterRequest(registerRequest, RoleType.USER);
+
+        Mfa mfa = Mfa.of(UUID.randomUUID(), false, "");
+        when(mfaService.createMfa(any(User.class))).thenReturn(Mono.just(mfa));
 
         Mono<User> request = userService.createUser(userDTO);
 
