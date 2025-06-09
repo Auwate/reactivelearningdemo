@@ -13,6 +13,8 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Component
 public class JwtUtil {
@@ -94,7 +96,7 @@ public class JwtUtil {
             SecureRandom secureRandom = new SecureRandom();
             byte[] bytes = new byte[32];
             secureRandom.nextBytes(bytes);
-            String key = Arrays.toString(bytes);
+            String key = IntStream.range(0, bytes.length).mapToObj(i -> Byte.toString(bytes[i])).collect(Collectors.joining(", "));
 
             logger.warn("⚠️ Generated ephemeral JWT secret key: {}", key);
             return key;

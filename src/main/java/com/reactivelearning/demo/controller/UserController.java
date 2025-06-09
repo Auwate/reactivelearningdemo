@@ -57,7 +57,6 @@ public class UserController {
                                 .from("reactive_authn_authz", loginResponse.getJwtToken())
                                 .httpOnly(true)
                                 .sameSite("Strict")
-                                .secure(true)
                                 .path("/")
                                 .build();
                         response.addCookie(cookie);

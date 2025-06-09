@@ -114,7 +114,8 @@ public class UserService implements ReactiveUserDetailsService {
                                                         false,
                                                         false,
                                                         true,
-                                                        ""))));
+                                                        ""))))
+                .doOnNext(loginResponse -> logger.info("Login was successful: {}", loginResponse.success()));
     }
 
     /**

@@ -9,7 +9,6 @@ COPY ./src ./src
 COPY ./build_ssl.sh ./
 
 RUN mvn clean package -DskipTests
-RUN chmod 777 ./build_ssl.sh && ./build_ssl.sh
 
 # == Runtime environment. Includes JRE and jar file
 
@@ -18,8 +17,6 @@ FROM eclipse-temurin:21.0.5_11-jre-alpine-3.21
 WORKDIR /auth
 
 COPY --from=builder /build/target/*.jar ./auth.jar
-COPY --from=builder /build/springboot.crt ./
-COPY --from=builder /build/springboot.p12 ./
 
 EXPOSE 8080
 
