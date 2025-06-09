@@ -63,11 +63,13 @@ public class UserController {
      * @return Void : The controller returns a status code and related authentication cookies.
      */
     @PostMapping("/auth/register")
-    public Mono<ResponseEntity<Void>> register(
+    public Mono<ResponseEntity<String>> register(
             @RequestBody @Valid RegisterRequest registerRequest
     ) {
         return userService.register(registerRequest)
-                .map(response -> ResponseEntity.status(HttpStatus.CREATED).build());
+                .map(response -> ResponseEntity
+                        .status(HttpStatus.CREATED)
+                        .body(response.getMfaUri()));
     }
 
     @PostMapping("/users")

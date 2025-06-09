@@ -15,7 +15,7 @@ spring:
     name: "demo"
   r2dbc:
     initialize-schema: "embedded"
-    url: "r2dbc:h2:mem:///db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=TRUE;"
+    url: "r2dbc:h2:mem:///db;DB_CLOSE_ON_EXIT=TRUE;"
     username: sa
     password:
 server:
@@ -24,6 +24,13 @@ management:
   endpoints:
     web:
       base-path: "/manage"
+      exposure:
+        include: health,info
+  metrics:
+    export:
+      simple:
+        enabled: true
+        step: 1m
 logging:
   level:
     root: "DEBUG"
@@ -31,3 +38,5 @@ logging:
     io.r2dbc.spi: INFO
 domain:
   name: http://localhost:3000
+mfa:
+  secret: ${MFA_SECRET_KEY:Undefined} # Make sure to encode to Base64

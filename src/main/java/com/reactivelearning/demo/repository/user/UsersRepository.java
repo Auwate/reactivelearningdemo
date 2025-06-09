@@ -1,4 +1,4 @@
-package com.reactivelearning.demo.repository;
+package com.reactivelearning.demo.repository.user;
 
 import com.reactivelearning.demo.entities.User;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;

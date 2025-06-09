@@ -30,6 +30,9 @@ public class User implements UserDetails {
     @Transient
     private List<Role> roles;
 
+    @Transient
+    private Mfa mfa;
+
     public User(String username, String password, String email) {
         this.username = username;
         this.password = password;
@@ -99,6 +102,14 @@ public class User implements UserDetails {
     public List<Role> getRoles() {return this.roles;}
 
     public void setRoles(List<Role> roles) {this.roles = roles;}
+
+    public Mfa getMfa() {
+        return this.mfa;
+    }
+
+    public void setMfa(Mfa mfa) {
+        this.mfa = mfa;
+    }
 
     public User update(String username, String password, String email) {
         if (username != null) {

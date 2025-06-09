@@ -57,6 +57,18 @@
 			<artifactId>java-jwt</artifactId>
 			<version>4.5.0</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.google.crypto.tink/tink -->
+		<dependency>
+			<groupId>com.google.crypto.tink</groupId>
+			<artifactId>tink</artifactId>
+			<version>1.17.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.warrenstrange/googleauth -->
+		<dependency>
+			<groupId>com.warrenstrange</groupId>
+			<artifactId>googleauth</artifactId>
+			<version>1.5.0</version>
+		</dependency>
 		<dependency>
 			<groupId>io.r2dbc</groupId>
 			<artifactId>r2dbc-h2</artifactId>

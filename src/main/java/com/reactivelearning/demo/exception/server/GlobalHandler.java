@@ -1,9 +1,6 @@
 package com.reactivelearning.demo.exception.server;
 
-import com.reactivelearning.demo.exception.entities.ExistsException;
-import com.reactivelearning.demo.exception.entities.NotFoundException;
-import com.reactivelearning.demo.exception.entities.RolesNotFoundException;
-import com.reactivelearning.demo.exception.entities.WeakPasswordException;
+import com.reactivelearning.demo.exception.entities.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -59,6 +56,43 @@ public class GlobalHandler {
                         .status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(ex.getMessage()))
                 .doOnSubscribe(sub -> logger.error("User with no role was found."));
+    }
+
+    @ExceptionHandler(InternalServerException.class)
+    public Mono<ResponseEntity<String>> handleInternalServerException(InternalServerException ex) {
+        return Mono.fromSupplier(() ->
+                ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error("An internal server error occurred."));
+    }
+
+    @ExceptionHandler(MfaNotFoundException.class)
+    public Mono<ResponseEntity<String>> handleMfaNotFoundException(MfaNotFoundException ex) {
+        return Mono.fromSupplier(() ->
+                ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.error("The users MFA could not be found."));
+    }
+
+    @ExceptionHandler(TOTPInvalidException.class)
+    public Mono<ResponseEntity<String>> handleTOTPInvalidException(TOTPInvalidException ex) {
+        return Mono.fromSupplier(() ->
+                ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.info("TOTP incorrect."));
+    }
+
+    @ExceptionHandler(MfaRepositoryException.class)
+    public Mono<ResponseEntity<String>> handleMfaRepositoryException(MfaRepositoryException ex) {
+        return Mono.fromSupplier(() ->
+                        ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ex.getMessage()))
+                .doOnSubscribe(sub -> logger.info("There was an " +
+                        "error manipulating the MFA object in the repository"));
     }
 
     @ExceptionHandler(Exception.class)

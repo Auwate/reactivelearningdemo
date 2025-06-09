@@ -8,12 +8,10 @@ import com.reactivelearning.demo.dto.user.PartialUserDTO;
 import com.reactivelearning.demo.dto.user.UserDTO;
 import com.reactivelearning.demo.dto.user.UserRequest;
 import com.reactivelearning.demo.entities.*;
-import com.reactivelearning.demo.exception.entities.ExistsException;
-import com.reactivelearning.demo.exception.entities.NotFoundException;
-import com.reactivelearning.demo.exception.entities.RolesNotFoundException;
-import com.reactivelearning.demo.repository.RolesRepository;
-import com.reactivelearning.demo.repository.UsersRolesRepository;
-import com.reactivelearning.demo.repository.UsersRepository;
+import com.reactivelearning.demo.exception.entities.*;
+import com.reactivelearning.demo.repository.user.RolesRepository;
+import com.reactivelearning.demo.repository.user.UsersRolesRepository;
+import com.reactivelearning.demo.repository.user.UsersRepository;
 import com.reactivelearning.demo.security.util.PasswordHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +37,7 @@ public class UserService implements ReactiveUserDetailsService {
     private final UsersRolesRepository usersRolesRepository;
     private final PasswordHandler passwordHandler;
     private final TransactionalOperator transactionalOperator;
+    private final MfaService mfaService;
 
     private static final Logger logger = LoggerFactory.getLogger(ReactiveUserDetailsService.class);
 
@@ -48,13 +47,17 @@ public class UserService implements ReactiveUserDetailsService {
             RolesRepository rolesRepository,
             UsersRolesRepository usersRolesRepository,
             PasswordHandler passwordHandler,
-            TransactionalOperator transactionalOperator) {
+            TransactionalOperator transactionalOperator,
+            MfaService mfaService) {
         this.usersRepository = usersRepository;
         this.rolesRepository = rolesRepository;
         this.usersRolesRepository = usersRolesRepository;
         this.passwordHandler = passwordHandler;
         this.transactionalOperator = transactionalOperator;
+        this.mfaService = mfaService;
     }
+
+    // Controller methods
 
     /**
      * Login
@@ -67,7 +70,45 @@ public class UserService implements ReactiveUserDetailsService {
     public Mono<LoginResponse> login(LoginRequest loginRequest) {
         return ReactiveSecurityContextHolder.getContext()
                 .map(context -> (User) context.getAuthentication().getPrincipal())
-                .map(secureUser -> LoginResponse.of(true, false, false, ""));
+                .flatMap(secureUser ->
+                        getMfa(secureUser)
+                                .map(mfa -> {
+                                    secureUser.setMfa(mfa);
+                                    return secureUser;
+                                })
+                                .flatMap(updatedUser ->
+                                        Mono.fromSupplier(() ->
+                                                        validateTOTP(
+                                                                updatedUser,
+                                                                loginRequest.getTotp()))
+                                        .then(Mono.fromSupplier(() ->
+                                                LoginResponse.of(
+                                                        true,
+                                                        false,
+                                                        false,
+                                                        ""))))
+                                .onErrorResume(TOTPNotProvidedException.class, ex ->
+                                        Mono.fromSupplier(() ->
+                                            secureUser.getMfa().isEnabled() ?
+                                                    LoginResponse.of(
+                                                        false,
+                                                        true,
+                                                        false,
+                                                        "")
+                                                    : // Ternary
+                                                    LoginResponse.of(
+                                                            true,
+                                                            false,
+                                                            false,
+                                                            ""
+                                                    )))
+                                .onErrorResume(TOTPInvalidException.class, ex ->
+                                        Mono.fromSupplier(() ->
+                                                LoginResponse.of(
+                                                        false,
+                                                        false,
+                                                        true,
+                                                        ""))));
     }
 
     /**
@@ -78,9 +119,11 @@ public class UserService implements ReactiveUserDetailsService {
      * @return RegisterResponse : The result of trying to register under these credentials
      */
     public Mono<RegisterResponse> register(RegisterRequest registerRequest) {
-        return createUser(UserRequest.fromRegisterRequest(registerRequest, RoleType.USER))
-                .map(savedUser -> RegisterResponse.fromUser(savedUser))
-                .doOnNext(sub -> logger.info("Successfully registered user {}", registerRequest.getUsername()));
+        return Mono.defer(() ->
+                createUser(UserRequest.fromRegisterRequest(registerRequest, RoleType.USER))
+                        .flatMap((User savedUser) -> generateURI(savedUser)
+                                .flatMap(mfaUri -> Mono.fromSupplier(() -> RegisterResponse.of(savedUser, mfaUri))))
+                        .doOnNext(sub -> logger.info("Successfully registered user {}", registerRequest.getUsername())));
     }
 
     // CRUD operations
@@ -99,16 +142,53 @@ public class UserService implements ReactiveUserDetailsService {
                                         transactionalOperator.transactional( // ATOMIC
                                                 saveUserFromRequest(userRequest)
                                                         .flatMap(savedUser -> saveUserRole(savedUser, foundRole)
-                                                                .thenReturn(savedUser)))))
+                                                                .flatMap(__ -> saveMfa(savedUser))
+                                                                .map(createdMfa -> {
+                                                                    savedUser.setMfa(createdMfa);
+                                                                    return savedUser;
+                                                                }))
                                 .map(savedUser -> {
                                     savedUser.setRoles(List.of(foundRole));
                                     return savedUser;
                                 }))
-                .doOnError(error -> logger.error("Error when creating user {}", userRequest.getUsername()));
+                .doOnError(error -> logger.error("Error when creating user {}", userRequest.getUsername())))));
 
     }
 
+    // MFA Operations
+
+    /**
+     * Validate TOTP
+     * - Checks if the provided TOTP code is valid against the User's MFA data
+     * @param user User : The user trying to log in
+     * @param code int : The code provided on login
+     * @return Void : If it passes, it won't emit anything. If it doesn't, it will throw an error for the
+     * controller to pick up and emit.
+     */
+    public Mono<Void> validateTOTP(User user, int code) {
+        return Mono.fromCallable(() -> mfaService.validate(user.getMfa(), code))
+                .flatMap(valid -> valid ? Mono.empty() : Mono.error(new TOTPInvalidException("Invalid TOTP")));
+    }
+
+    /**
+     * Create a User's MFA URI.
+     * - Links to a User's phone for 2FA.
+     * @param user User : The newly registered user
+     * @return String : The URI of the 2FA for use on the phone.
+     */
+    public Mono<String> generateURI(User user) {
+        return Mono.fromSupplier(() ->
+                String.format(
+                        "otpauth://totp/ReactiveAuth:%s?secret=%s&issuer=ReactiveAuth\n",
+                        user.getId(),
+                        user.getMfa().getMfaSecret()));
+    }
+
     // Getters
+
+    public Mono<Mfa> getMfa(User user) {
+        return mfaService.getMfa(user);
+    }
 
     public Mono<Role> getRole(RoleType role) {
         return rolesRepository.findByRole(role.name())
@@ -123,6 +203,14 @@ public class UserService implements ReactiveUserDetailsService {
     }
 
     // Setters
+
+    public Mono<Mfa> saveMfa(User user) {
+        return mfaService.createMfa(user)
+                .map(mfa -> {
+                    user.setMfa(mfa);
+                    return mfa;
+                });
+    }
 
     public Mono<UserRoles> saveUserRole(User user, Role role) {
         return Mono.defer(() ->
@@ -142,6 +230,8 @@ public class UserService implements ReactiveUserDetailsService {
                 .flatMap(exists -> Mono.error(new ExistsException("Username is taken.")))
                 .then(Mono.empty());
     }
+
+    // Legacy methods (deprecated)
 
     public Flux<Map<UUID, UserDTO>> getUsers() {
         return usersRepository.findAll()

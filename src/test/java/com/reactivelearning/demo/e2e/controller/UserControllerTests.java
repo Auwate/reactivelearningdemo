@@ -1,24 +1,28 @@
 package com.reactivelearning.demo.e2e.controller;
 
-import com.reactivelearning.demo.controller.UserController;
 import com.reactivelearning.demo.dto.auth.LoginRequest;
 import com.reactivelearning.demo.dto.auth.RegisterRequest;
+import com.reactivelearning.demo.service.MfaService;
+import com.reactivelearning.demo.service.UserService;
+import com.warrenstrange.googleauth.GoogleAuthenticator;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 /**
  * An End-To-End testing suite to target controller behavior.
+ * - DirtiesContext not used as it causes issues with R2DBC connection pooling. This becomes especially apparent
+ * when trying to get valid MFA codes.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class UserControllerTests {
 
     private static final Logger logger = LoggerFactory.getLogger(UserControllerTests.class);
@@ -26,15 +30,21 @@ public class UserControllerTests {
     private final String LOGIN_URI = "/api/v1/auth/login";
     private final String REGISTER_URI = "/api/v1/auth/register";
 
-    private final UserController userController;
     private final WebTestClient webTestClient;
+    private final MfaService mfaService;
+    private final UserService userService;
+    private final GoogleAuthenticator authenticator;
 
     @Autowired
     public UserControllerTests(
-            UserController userController,
-            WebTestClient webTestClient) {
-        this.userController = userController;
+            WebTestClient webTestClient,
+            MfaService mfaService,
+            UserService userService,
+            GoogleAuthenticator authenticator) {
         this.webTestClient = webTestClient;
+        this.mfaService = mfaService;
+        this.userService = userService;
+        this.authenticator = authenticator;
     }
 
     /**
@@ -43,10 +53,10 @@ public class UserControllerTests {
     @Test
     void shouldReturn200WhenRegisteringWithValidData() {
 
-        logger.debug("shouldReturn200WhenRegisteringWithValidData: Starting");
+        logger.info("shouldReturn200WhenRegisteringWithValidData: Starting");
 
         RegisterRequest registerRequest = new RegisterRequest(
-                "auwate",
+                "auwatetest",
                 "testpassword",
                 "test@email.com"
         );
@@ -65,7 +75,7 @@ public class UserControllerTests {
     @Test
     void shouldReturn400WhenRegisteringWithDuplicateName() {
 
-        logger.debug("shouldReturn400WhenRegisteringWithDuplicateName: Starting");
+        logger.info("shouldReturn400WhenRegisteringWithDuplicateName: Starting");
 
         RegisterRequest registerRequest = new RegisterRequest(
                 "test",
@@ -78,7 +88,6 @@ public class UserControllerTests {
                 .bodyValue(registerRequest)
                 .exchange()
                 .expectStatus().is2xxSuccessful();
-
 
         webTestClient.post()
                 .uri(REGISTER_URI)
@@ -94,7 +103,7 @@ public class UserControllerTests {
     @Test
     void shouldReturn400WhenRegisteringWithAWeakPassword() {
 
-        logger.debug("shouldReturn400WhenRegisteringWithAWeakPassword: Starting");
+        logger.info("shouldReturn400WhenRegisteringWithAWeakPassword: Starting");
 
         RegisterRequest registerRequest = new RegisterRequest("Test", "Weak", "Test");
 
@@ -112,18 +121,28 @@ public class UserControllerTests {
     @Test
     void shouldReturn200WhenLoggingInWithValidCredentials() {
 
-        logger.debug("shouldReturn200WhenLoggingInWithValidCredentials: Starting");
+        logger.info("shouldReturn200WhenLoggingInWithValidCredentials: Starting");
 
-        RegisterRequest registerRequest = new RegisterRequest("Test", "TestPassword", "Test");
-        LoginRequest loginRequest = new LoginRequest("Test");
-        String encodedUser = "VGVzdDpUZXN0UGFzc3dvcmQ=";
+        RegisterRequest registerRequest = new RegisterRequest(
+                "auwate",
+                "testpassword",
+                "email");
+        LoginRequest loginRequest;
+        String encodedUser = "YXV3YXRlOnRlc3RwYXNzd29yZA==";
 
-        // Create user
-        webTestClient.post()
+        // Register user
+        String response = webTestClient.post()
                 .uri(REGISTER_URI)
                 .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().is2xxSuccessful();
+                .returnResult(String.class)
+                .getResponseBody()
+                .blockFirst();
+
+        assertNotNull(response);
+
+        String secret = response.substring(response.indexOf("secret=")+7, response.indexOf("&issuer="));
+        loginRequest = new LoginRequest(String.valueOf(authenticator.getTotpPassword(secret)));
 
         // Assertion
         webTestClient.post()
@@ -141,10 +160,10 @@ public class UserControllerTests {
     @Test
     void shouldReturn401WhenLoggingInWithInvalidUser() {
 
-        logger.debug("shouldReturn401WhenLoggingInWithInvalidUser: Starting");
+        logger.info("shouldReturn401WhenLoggingInWithInvalidUser: Starting");
 
-        LoginRequest loginRequest = new LoginRequest("Test");
-        String encodedUnknownUser = "VGVzdDpUZXN0UGFzc3dvcmQ=";
+        LoginRequest loginRequest = new LoginRequest("123456");
+        String encodedUnknownUser = "d3Jvbmc6cGFzc3dvcmQ=";
 
         webTestClient.post()
                 .uri(LOGIN_URI)
