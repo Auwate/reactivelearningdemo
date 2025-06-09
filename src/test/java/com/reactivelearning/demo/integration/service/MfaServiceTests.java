@@ -75,6 +75,9 @@ public class MfaServiceTests {
 
     }
 
+    /**
+     * The MFA object should not be created when given invalid data
+     */
     @Test
     void shouldNotCreateMfaWhenGivenInvalidData() {
 
@@ -90,6 +93,9 @@ public class MfaServiceTests {
 
     }
 
+    /**
+     * The Mfa object should be retrieved with valid data
+     */
     @Test
     void shouldGetMfaWhenRetrievingValidData() {
 
@@ -117,6 +123,9 @@ public class MfaServiceTests {
 
     }
 
+    /**
+     * The Mfa object should fail when trying to retrieve invalid data
+     */
     @Test
     void shouldFailToGetMfaWhenRetrievingInvalidData() {
 
