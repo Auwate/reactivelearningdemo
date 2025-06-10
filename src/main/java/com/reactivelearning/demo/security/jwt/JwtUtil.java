@@ -1,7 +1,12 @@
 package com.reactivelearning.demo.security.jwt;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.reactivelearning.demo.entities.Role;
 import com.reactivelearning.demo.entities.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +16,8 @@ import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Date;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -39,6 +44,60 @@ public class JwtUtil {
      */
     public String generateToken(User user) {
         return createJwtToken(user, Algorithm.HMAC512(getSecret()));
+    }
+
+    /**
+     * isValid
+     * - Public method to validate a JWT via the secret key, and test its expiration
+     * @param jwt String : JWT in String format
+     * @return boolean
+     */
+    public boolean isValid(String jwt) {
+
+        try {
+
+            Algorithm algorithm = Algorithm.HMAC512(secret);
+
+            JWTVerifier verifier = JWT
+                    .require(algorithm)
+                    .build();
+
+            DecodedJWT decoded = verifier.verify(jwt);
+
+            return decoded.getExpiresAt().compareTo(new Date()) > 0;
+
+        } catch (JWTVerificationException ex) {
+            return false;
+        }
+
+    }
+
+    /**
+     * extract the User's information from the JWT.
+     * @param jwt String : Encoded JWT
+     * @return User : The user object
+     */
+    public User extractUserFromJwt(String jwt) {
+
+        try {
+            Algorithm algorithm = Algorithm.HMAC512(secret);
+            JWTVerifier verifier = JWT.require(algorithm).build();
+            DecodedJWT decoded = verifier.verify(jwt);
+
+            User user = new User();
+            user.setId(UUID.fromString(decoded.getSubject()));
+            user.setRoles(
+                    decoded
+                            .getClaim("authorities")
+                            .asList(String.class)
+                            .stream()
+                            .map(roleStr -> Role.of(roleStr.substring(5)))
+                            .toList());
+            return user;
+        } catch (Exception ex) {
+            return null;
+        }
+
     }
 
     /**

@@ -44,6 +44,7 @@ public class UserServiceTests {
     private final UsersRolesRepository usersRolesRepository;
     private final UserService userService;
     private final MfaService mfaService;
+    private final JwtUtil jwtUtil;
 
     @Autowired
     public UserServiceTests(
@@ -59,6 +60,7 @@ public class UserServiceTests {
         this.rolesRepository = rolesRepository;
         this.usersRolesRepository = usersRolesRepository;
         this.mfaService = mock(MfaService.class);           // MfaService is mocked.
+        this.jwtUtil = jwtUtil;
         this.userService = new UserService(
                 usersRepository,
                 rolesRepository,
@@ -89,14 +91,12 @@ public class UserServiceTests {
         logger.info("shouldCreateUserWhenDataIsValid: Test 1");
 
         StepVerifier.create(request)
-                .expectNextMatches(result -> {
+                .assertNext(result -> {
                     assertEquals(userDTO.getUsername(), result.getUsername(), String.format("Expected %s, Got %s", userDTO.getUsername(), result.getUsername()));
                     assertTrue(passwordHandler.compare(userDTO.getPassword(), result.getPassword()), String.format("Expected %s, Got %s", userDTO.getPassword(), result.getPassword()));
                     assertEquals(userDTO.getEmail(), result.getEmail(), String.format("Expected %s, Got %s", userDTO.getEmail(), result.getEmail()));
                     assertEquals(RoleType.USER.name(), result.getRoles().getFirst().getRole());
                     verify(mfaService, times(1)).createMfa(any(User.class));
-
-                    return true;
                 })
                 .expectComplete()
                 .verify();
@@ -162,6 +162,28 @@ public class UserServiceTests {
         StepVerifier.create(request)
                 .expectErrorMatches(exception -> exception instanceof ExistsException)
                 .verify();
+
+    }
+
+    /**
+     * Given valid data, UserService should be able to create a Jwt as a String
+     */
+    @Test
+    void shouldCreateJwtGivenValidData() {
+
+        logger.info("shouldCreateJwtGivenValidData: Starting");
+
+        UserRequest userRequest = new UserRequest(
+                "Test", "Test", "Test", RoleType.USER);
+
+        // Create the user and generate JWT
+        StepVerifier
+                .create(userService.createUser(userRequest)
+                        .map(createdUser -> jwtUtil.generateToken(createdUser)))
+                .assertNext(jwt -> {
+                    assertTrue(jwtUtil.isValid(jwt));
+
+                });
 
     }
 

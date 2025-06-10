@@ -16,6 +16,11 @@ public class LoginRequest {
         this.totp = totp;
     }
 
+    /**
+     * Get the TOTP code
+     * - If the TOTP code was not provided, is blank, or length != 6, then it's wrong.
+     * @return Integer : TOTP in int format
+     */
     public int getTotp() {
 
         if (totp == null || totp.isBlank()) {

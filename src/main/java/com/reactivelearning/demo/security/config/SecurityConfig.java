@@ -41,8 +41,7 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain userFilterChain (
             ServerHttpSecurity http,
-            @Value("${domain.name}") String location,
-            CookieFilter cookieFilter) {
+            @Value("${domain.name}") String location) {
 
         return defaultConfig(location, http
                 .securityMatcher(new PathPatternParserServerWebExchangeMatcher("/api/v1/users"))
@@ -83,13 +82,35 @@ public class SecurityConfig {
     }
 
     /**
+     * User modification endpoint filter
+     * - For use with endpoints the mutate a user's configurations
+     * @param http ServerHttpSecurity : A webflux specific filter chain/
+     * @param location String : CORS source location
+     * @return SecurityWebFilterChain : Webflux specific response
+     */
+    @Order(3)
+    @Bean
+    public SecurityWebFilterChain mutatorFilterChain (
+            ServerHttpSecurity http,
+            @Value("${domain.name}") String location) {
+
+        return defaultConfig(location, http
+                .securityMatcher(new PathPatternParserServerWebExchangeMatcher("/api/v1/user/**"))
+                .authorizeExchange(exchanges -> exchanges
+                        .anyExchange().permitAll()
+                )
+                .csrf(csrf -> csrf.disable()));
+
+    }
+
+    /**
      * The default configuration
      * - If any requests hit a URL that does not fall within the set endpoints, it will use this
      * @param http ServerHttpSecurity : A webflux specific filter chain/
      * @param location String : CORS source location
      * @return SecurityWebFilterChain : Webflux specific response
      */
-    @Order(3)
+    @Order(4)
     @Bean
     public SecurityWebFilterChain defaultChain (
             ServerHttpSecurity http, @Value("${domain.name}") String location) {

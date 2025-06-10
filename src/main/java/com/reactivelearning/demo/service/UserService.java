@@ -30,6 +30,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Method Legend:
+ * ---
+ * login()
+ * - Public method to call from the Controller for the login flow
+ * ---
+ * register()
+ * - Public method to call from the controller for the register flow
+ * ---
+ * createUser()
+ * - Public method, only used by login.
+ * - Creates a user and the accompanying data
+ * ---
+ * validateTOTP()
+ * - Public method, only used by login.
+ * - Validates a TOTP code
+ * ---
+ * generateUri()
+ * - Public method, only used by register
+ * - Creates an OTP code for the user to register with their phone
+ * ---
+ * generateJwt()
+ * - Public method, only used by login
+ * - Creates a JWT in String format to be used in the returned Cookie
+ */
 @Service
 public class UserService implements ReactiveUserDetailsService {
 

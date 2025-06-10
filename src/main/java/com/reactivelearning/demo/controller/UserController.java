@@ -83,6 +83,13 @@ public class UserController {
                         .body(response.getMfaUri()));
     }
 
+    @PostMapping("/user")
+    public Mono<ResponseEntity<Void>> updateUser() {
+        return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
+    }
+
+    // Legacy methods
+
     @PostMapping("/users")
     public Mono<ResponseEntity<Map<UUID, UserDTO>>> createUser(
             @RequestBody @Valid UserDTO userDTO
