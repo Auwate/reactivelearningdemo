@@ -153,7 +153,7 @@ public class UserControllerTests {
                 .exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectCookie().httpOnly("reactive_authn_authz", true)
-                .expectCookie().sameSite("Strict", "Strict");
+                .expectCookie().sameSite("reactive_authn_authz", "Strict");
 
     }
 

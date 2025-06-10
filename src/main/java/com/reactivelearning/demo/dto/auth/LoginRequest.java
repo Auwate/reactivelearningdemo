@@ -20,7 +20,7 @@ public class LoginRequest {
 
         if (totp == null || totp.isBlank()) {
             throw new TOTPNotProvidedException("TOTP not provided");
-        } else if (totp.length() < 6) {
+        } else if (totp.length() != 6) {
             throw new TOTPInvalidException("Provided TOTP is invalid");
         }
 

@@ -46,10 +46,10 @@ public class UserController {
             @RequestBody @Valid LoginRequest loginRequest
     ) {
         return userService.login(loginRequest)
-                .doOnSubscribe(sub -> logger.info("POST connection received at /api/v1/login"))
+                .doOnSubscribe(sub -> logger.info("POST connection received at /api/v1/auth/login"))
                 .map(loginResponse -> {
                     if (loginResponse.requires2fa()) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                        return ResponseEntity.status(HttpStatus.CONTINUE).build();
                     } else if (loginResponse.invalid2fa()) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
                     } else if (loginResponse.success()) {
@@ -77,6 +77,7 @@ public class UserController {
             @RequestBody @Valid RegisterRequest registerRequest
     ) {
         return userService.register(registerRequest)
+                .doOnSubscribe(sub -> logger.info("POST connection received at /api/v1/auth/register"))
                 .map(response -> ResponseEntity
                         .status(HttpStatus.CREATED)
                         .body(response.getMfaUri()));

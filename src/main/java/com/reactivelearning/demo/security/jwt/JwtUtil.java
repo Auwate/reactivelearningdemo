@@ -51,7 +51,7 @@ public class JwtUtil {
     private String createJwtToken(User user, Algorithm algorithm) {
         return JWT.create()
                 .withSubject(user.getId().toString())
-                .withClaim("authorities", user.getRoles().stream().toList())
+                .withClaim("authorities", user.getRolesAsStrings())
                 .withIssuedAt(new Date())
                 .withExpiresAt(new Date(System.currentTimeMillis() + getExpirationTimerInMillis()))
                 .sign(algorithm);
