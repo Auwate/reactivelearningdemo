@@ -1,20 +1,128 @@
 package com.reactivelearning.demo.security.jwt;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.reactivelearning.demo.entities.Role;
 import com.reactivelearning.demo.entities.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Date;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+@Component
 public class JwtUtil {
 
     private final String secret;
-    private final Duration EXPIRATION_TIMER = Duration.ofMinutes(10);
 
+    private final Duration EXPIRATION_TIMER = Duration.ofDays(1);
 
-    public JwtUtil(@Value("${jwt.secret}") String secret) {
-        this.secret = secret;
+    private final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
+
+    @Autowired
+    public JwtUtil(
+            @Value("${jwt.secret}") String secret) {
+        this.secret = getSecret(secret);
+    }
+
+    /**
+     * generateToken
+     * - Public method to create a JWT
+     * @param user User : The user to create a JWT
+     * @return String : The JWT in string format
+     */
+    public String generateToken(User user) {
+        return createJwtToken(user, Algorithm.HMAC512(getSecret()));
+    }
+
+    /**
+     * isValid
+     * - Public method to validate a JWT via the secret key, and test its expiration
+     * @param jwt String : JWT in String format
+     * @return boolean
+     */
+    public boolean isValid(String jwt) {
+
+        try {
+
+            Algorithm algorithm = Algorithm.HMAC512(secret);
+
+            JWTVerifier verifier = JWT
+                    .require(algorithm)
+                    .build();
+
+            DecodedJWT decoded = verifier.verify(jwt);
+
+            return decoded.getExpiresAt().compareTo(new Date()) > 0;
+
+        } catch (JWTVerificationException ex) {
+            return false;
+        }
+
+    }
+
+    /**
+     * extract the User's information from the JWT.
+     * @param jwt String : Encoded JWT
+     * @return User : The user object
+     */
+    public User extractUserFromJwt(String jwt) {
+
+        try {
+            Algorithm algorithm = Algorithm.HMAC512(secret);
+            JWTVerifier verifier = JWT.require(algorithm).build();
+            DecodedJWT decoded = verifier.verify(jwt);
+
+            User user = new User();
+            user.setId(UUID.fromString(decoded.getSubject()));
+            user.setRoles(
+                    decoded
+                            .getClaim("authorities")
+                            .asList(String.class)
+                            .stream()
+                            .map(roleStr -> Role.of(roleStr.substring(5)))
+                            .toList());
+            return user;
+        } catch (Exception ex) {
+            return null;
+        }
+
+    }
+
+    /**
+     * createJwtToken
+     * - Private method to create a JWT
+     * @param user User : User to create a Jwt for
+     * @param algorithm Algorithm: The algorithm to sign the JWT. Holds the secret key as well
+     * @return String : JWT in String format
+     */
+    private String createJwtToken(User user, Algorithm algorithm) {
+        return JWT.create()
+                .withSubject(user.getId().toString())
+                .withClaim("authorities", user.getRolesAsStrings())
+                .withIssuedAt(new Date())
+                .withExpiresAt(new Date(System.currentTimeMillis() + getExpirationTimerInMillis()))
+                .sign(algorithm);
+    }
+
+    /**
+     * getSecret
+     * - Get the secret key, but only allow within this class.
+     * @return String : Secret key
+     */
+    private String getSecret() {
+        return this.secret;
     }
 
     /**
@@ -23,13 +131,37 @@ public class JwtUtil {
      * need to have an expiration timer of 60 decades.
      * @return int : Expiration in seconds
      */
-    public int getExpirationTimerInSeconds() {
+    private int getExpirationTimerInSeconds() {
         return (int) EXPIRATION_TIMER.toSeconds();
     }
 
-    private String getSecret() {
-        return this.secret;
+    /**
+     * getExpirationTimerInMillis
+     * - Used by the creation method to get the expiration timer in milliseconds
+     * @return long : Expiration in milliseconds
+     */
+    private long getExpirationTimerInMillis() {
+        return EXPIRATION_TIMER.toMillis();
     }
 
+    /**
+     * getSecret
+     * - Given a secret key, return the value or create a random one if secretKey == 'Undefined'
+     * @param secretKey String : The secret key
+     * @return String : The secret key OR a random key
+     */
+    private String getSecret(String secretKey) {
+        if (secretKey.equals("Undefined")) {
+            SecureRandom secureRandom = new SecureRandom();
+            byte[] bytes = new byte[32];
+            secureRandom.nextBytes(bytes);
+            String key = IntStream.range(0, bytes.length).mapToObj(i -> Byte.toString(bytes[i])).collect(Collectors.joining(", "));
+
+            logger.warn("⚠️ Generated ephemeral JWT secret key: {}", key);
+            return key;
+        } else {
+            return secretKey;
+        }
+    }
 
 }

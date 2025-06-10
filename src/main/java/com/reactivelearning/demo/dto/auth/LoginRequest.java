@@ -16,11 +16,16 @@ public class LoginRequest {
         this.totp = totp;
     }
 
+    /**
+     * Get the TOTP code
+     * - If the TOTP code was not provided, is blank, or length != 6, then it's wrong.
+     * @return Integer : TOTP in int format
+     */
     public int getTotp() {
 
         if (totp == null || totp.isBlank()) {
             throw new TOTPNotProvidedException("TOTP not provided");
-        } else if (totp.length() < 6) {
+        } else if (totp.length() != 6) {
             throw new TOTPInvalidException("Provided TOTP is invalid");
         }
 

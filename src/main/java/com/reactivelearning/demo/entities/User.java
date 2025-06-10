@@ -67,6 +67,12 @@ public class User implements UserDetails {
                 .toList();
     }
 
+    public List<String> getRolesAsStrings() {
+        return roles.stream()
+                .map(role -> "ROLE_{}" + role.getRole())
+                .toList();
+    }
+
     public UUID getId() {
         return id;
     }

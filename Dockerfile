@@ -6,6 +6,7 @@ WORKDIR /build
 
 COPY ./pom.xml ./
 COPY ./src ./src
+COPY ./build_ssl.sh ./
 
 RUN mvn clean package -DskipTests
 

@@ -1,15 +1,3 @@
-#spring:
-#  application:
-#    name: "demo"
-#server:
-#  port: 8080
-#management:
-#  endpoints:
-#    web:
-#      base-path: "/manage"
-#logging:
-#  level:
-#    root: "INFO"
 spring:
   application:
     name: "demo"
@@ -36,7 +24,16 @@ logging:
     root: "DEBUG"
     org.springframework.data.r2dbc: INFO
     io.r2dbc.spi: INFO
+jwt:
+  secret: ${JWT_SECRET_KEY:Undefined}
 domain:
   name: http://localhost:3000
 mfa:
   secret: ${MFA_SECRET_KEY:Undefined} # Make sure to encode to Base64
+app:
+  security:
+    filters:
+      cookies:
+        enabled: true
+        permitted-paths:
+          - "/api/v1/auth/**"

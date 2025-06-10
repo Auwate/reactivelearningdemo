@@ -12,6 +12,7 @@ import com.reactivelearning.demo.exception.entities.*;
 import com.reactivelearning.demo.repository.user.RolesRepository;
 import com.reactivelearning.demo.repository.user.UsersRolesRepository;
 import com.reactivelearning.demo.repository.user.UsersRepository;
+import com.reactivelearning.demo.security.jwt.JwtUtil;
 import com.reactivelearning.demo.security.util.PasswordHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Method Legend:
+ * ---
+ * login()
+ * - Public method to call from the Controller for the login flow
+ * ---
+ * register()
+ * - Public method to call from the controller for the register flow
+ * ---
+ * createUser()
+ * - Public method, only used by login.
+ * - Creates a user and the accompanying data
+ * ---
+ * validateTOTP()
+ * - Public method, only used by login.
+ * - Validates a TOTP code
+ * ---
+ * generateUri()
+ * - Public method, only used by register
+ * - Creates an OTP code for the user to register with their phone
+ * ---
+ * generateJwt()
+ * - Public method, only used by login
+ * - Creates a JWT in String format to be used in the returned Cookie
+ */
 @Service
 public class UserService implements ReactiveUserDetailsService {
 
@@ -38,6 +64,7 @@ public class UserService implements ReactiveUserDetailsService {
     private final PasswordHandler passwordHandler;
     private final TransactionalOperator transactionalOperator;
     private final MfaService mfaService;
+    private final JwtUtil jwtUtil;
 
     private static final Logger logger = LoggerFactory.getLogger(ReactiveUserDetailsService.class);
 
@@ -48,13 +75,15 @@ public class UserService implements ReactiveUserDetailsService {
             UsersRolesRepository usersRolesRepository,
             PasswordHandler passwordHandler,
             TransactionalOperator transactionalOperator,
-            MfaService mfaService) {
+            MfaService mfaService,
+            JwtUtil jwtUtil) {
         this.usersRepository = usersRepository;
         this.rolesRepository = rolesRepository;
         this.usersRolesRepository = usersRolesRepository;
         this.passwordHandler = passwordHandler;
         this.transactionalOperator = transactionalOperator;
         this.mfaService = mfaService;
+        this.jwtUtil = jwtUtil;
     }
 
     // Controller methods
@@ -81,12 +110,14 @@ public class UserService implements ReactiveUserDetailsService {
                                                         validateTOTP(
                                                                 updatedUser,
                                                                 loginRequest.getTotp()))
-                                        .then(Mono.fromSupplier(() ->
-                                                LoginResponse.of(
-                                                        true,
-                                                        false,
-                                                        false,
-                                                        ""))))
+                                        .then(generateJwt(updatedUser)
+                                                .flatMap(jwt ->
+                                                        Mono.fromSupplier(() ->
+                                                                LoginResponse.of(
+                                                                        true,
+                                                                        false,
+                                                                        false,
+                                                                        jwt)))))
                                 .onErrorResume(TOTPNotProvidedException.class, ex ->
                                         Mono.fromSupplier(() ->
                                             secureUser.getMfa().isEnabled() ?
@@ -108,7 +139,8 @@ public class UserService implements ReactiveUserDetailsService {
                                                         false,
                                                         false,
                                                         true,
-                                                        ""))));
+                                                        ""))))
+                .doOnNext(loginResponse -> logger.info("Login was successful: {}", loginResponse.success()));
     }
 
     /**
@@ -182,6 +214,16 @@ public class UserService implements ReactiveUserDetailsService {
                         "otpauth://totp/ReactiveAuth:%s?secret=%s&issuer=ReactiveAuth\n",
                         user.getId(),
                         user.getMfa().getMfaSecret()));
+    }
+
+    /**
+     * Create a JWT for the user
+     * - Uses a User's ID for the Jwt claim
+     * @param user User : User to be given a JWT
+     * @return String : The user's JWT
+     */
+    public Mono<String> generateJwt(User user) {
+        return Mono.fromSupplier(() -> jwtUtil.generateToken(user));
     }
 
     // Getters

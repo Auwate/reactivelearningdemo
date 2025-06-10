@@ -17,7 +17,16 @@ logging:
     root: "INFO"
     org.springframework.data.r2dbc: DEBUG
     io.r2dbc.spi: DEBUG
+jwt:
+  secret: ${JWT_SECRET_KEY:Undefined}
 domain:
   name: http://localhost:3000
 mfa:
   secret: ${MFA_SECRET_KEY:Undefined} # Make sure to encode to Base64
+app:
+  security:
+    filters:
+      cookies:
+        enabled: true
+        permitted-paths:
+          - "/api/v1/auth/**"
